@@ -8,6 +8,7 @@ import yaml
 
 from plugmem.core.graph.graph_store import MemoryGraphStore
 from plugmem.core.llm.deepseek import DeepSeekLLM
+from plugmem.core.reasoning.action_alignment import actions_align_to_workflow_dsl
 from plugmem.core.reasoning.answerer import answer_with_citations, answer_with_citations_from_items
 from plugmem.core.reasoning.memory_reasoner import MemoryReasoner
 from plugmem.core.reasoning.type_extractors import extract_key_items
@@ -143,31 +144,36 @@ class PlugMem:
         return self.reasoner.build_context(query=query, retrieved=retrieved)
 
     def retrieve_structured(self, query: str, instruction: str = "", state: str = "") -> StructuredAnswer:
-        """Phase 3: return a structured answer with citations."""
+        """Return a structured answer with citations and agent-friendly suggested actions."""
         retrieved = self.retriever.retrieve(RetrievalInput(query=query, instruction=instruction, state=state))
         ctx = self.reasoner.build_context(query=query, retrieved=retrieved)
         llm = getattr(self.standardizer, "llm", None)
 
-        # Build candidate lists with ids.
         semantic_candidates = [{"id": pid, "type": "proposition", "text": ""} for pid in retrieved.proposition_ids]
         procedural_candidates = [{"id": rid, "type": "prescription", "text": ""} for rid in retrieved.prescription_ids]
         evidence_candidates = [{"id": sid, "type": "episode_step", "text": ""} for sid in retrieved.evidence_step_ids]
 
-        # If store exists, enrich candidates with actual text.
+        primary_workflow_dsl: dict[str, Any] | None = None
+
         if self.sqlite_store:
             props = {r["proposition_id"]: r for r in self.sqlite_store.fetch_propositions()}
             pres = {r["prescription_id"]: r for r in self.sqlite_store.fetch_prescriptions()}
             steps = {r["step_id"]: r for r in self.sqlite_store.fetch_episode_steps(retrieved.evidence_step_ids)}
+
             for it in semantic_candidates:
                 row = props.get(it["id"])
                 if row:
                     it["text"] = row["content"]
-            for it in procedural_candidates:
+
+            for idx, it in enumerate(procedural_candidates):
                 row = pres.get(it["id"])
                 if row:
                     meta = row.get("metadata") or {}
                     dsl = meta.get("workflow_dsl") if isinstance(meta, dict) else None
                     it["text"] = f"Intent: {row['intent_text']}" + (f" | DSL: {dsl}" if dsl else "")
+                    if idx == 0 and isinstance(dsl, dict):
+                        primary_workflow_dsl = dsl
+
             for it in evidence_candidates:
                 row = steps.get(it["id"])
                 if row:
@@ -181,7 +187,6 @@ class PlugMem:
             evidence_items=evidence_candidates,
         )
 
-        # Prefer type-aware fusion; fall back to memory-block answerer if needed.
         try:
             ans = answer_with_citations_from_items(
                 llm=llm,
@@ -193,7 +198,7 @@ class PlugMem:
         except Exception:
             ans = answer_with_citations(llm=llm, query=query, memory_block=ctx.final_prompt_block)
 
-        # Third cut: enforce citations resolve to existing ids.
+        # Enforce citations resolve to existing ids.
         allowed_prop = set(retrieved.proposition_ids)
         allowed_pres = set(retrieved.prescription_ids)
         allowed_step = set(retrieved.evidence_step_ids)
@@ -214,4 +219,18 @@ class PlugMem:
             "prescriptions": len(allowed_pres),
             "episode_steps": len(allowed_step),
         }
+
+        # Align suggested actions to procedural DSL (best-effort) and keep as Pydantic objects.
+        try:
+            from plugmem.core.schema.answer import SuggestedAction
+
+            aligned_dicts = actions_align_to_workflow_dsl(
+                [a.model_dump() for a in ans.suggested_actions],
+                workflow_dsl=primary_workflow_dsl,
+            )
+            ans.suggested_actions = [SuggestedAction(**d) for d in aligned_dicts]
+            ans.metadata["actions_aligned_to_dsl"] = primary_workflow_dsl is not None
+        except Exception:
+            ans.metadata["actions_aligned_to_dsl"] = False
+
         return ans

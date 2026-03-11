@@ -28,6 +28,8 @@ class SuggestedAction(BaseModel):
     target: str = ""
     value: str = ""
     note: str = ""
+    # Optional traceability back to a procedural DSL step index
+    source_prescription_step: int | None = None
 
 
 class StructuredAnswer(BaseModel):
