@@ -8,8 +8,10 @@ import yaml
 
 from plugmem.core.graph.graph_store import MemoryGraphStore
 from plugmem.core.llm.deepseek import DeepSeekLLM
+from plugmem.core.reasoning.answerer import answer_with_citations
 from plugmem.core.reasoning.memory_reasoner import MemoryReasoner
 from plugmem.core.retrieval.retriever import MemoryRetriever, RetrievalInput
+from plugmem.core.schema import StructuredAnswer
 from plugmem.core.storage.sqlite_store import SQLiteStore
 from plugmem.core.structuring.deduplicator import LLMDeduplicator
 from plugmem.core.structuring.procedural_extractor import ProceduralExtractor
@@ -135,5 +137,14 @@ class PlugMem:
         self.graph_store.add_prescriptions(prescriptions)
 
     def retrieve(self, query: str, instruction: str = "", state: str = ""):
+        """Backward-compatible retrieve: returns a MemoryContext."""
         retrieved = self.retriever.retrieve(RetrievalInput(query=query, instruction=instruction, state=state))
         return self.reasoner.build_context(query=query, retrieved=retrieved)
+
+    def retrieve_structured(self, query: str, instruction: str = "", state: str = "") -> StructuredAnswer:
+        """Phase 3: return a structured answer with citations."""
+        retrieved = self.retriever.retrieve(RetrievalInput(query=query, instruction=instruction, state=state))
+        ctx = self.reasoner.build_context(query=query, retrieved=retrieved)
+        # Use the same llm as standardizer (best-effort)
+        llm = getattr(self.standardizer, "llm", None)
+        return answer_with_citations(llm=llm, query=query, memory_block=ctx.final_prompt_block)

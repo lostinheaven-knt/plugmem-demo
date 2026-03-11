@@ -24,6 +24,16 @@ class FakeLLM:
                 ]
             }
 
+        # Phase 3: answer with citations
+        if "cited_items" in str(schema) and "answer" in str(schema) and "Memory:" in prompt:
+            return {
+                "answer": "Based on memory, the agent should focus on wireless mouse results and compare by price.",
+                "reasoning_brief": "Used retrieved facts and procedures.",
+                "cited_items": [
+                    {"type": "proposition", "id": "prop_fake", "quote": "The target item is a wireless mouse."}
+                ],
+            }
+
         # Phase 2: workflow DSL
         if "strict JSON workflow DSL" in prompt and "steps" in str(schema):
             return {
