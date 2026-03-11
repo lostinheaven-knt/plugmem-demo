@@ -149,15 +149,9 @@ class PlugMem:
         llm = getattr(self.standardizer, "llm", None)
 
         # Build candidate lists with ids.
-        semantic_candidates = []
-        for pid in retrieved.proposition_ids:
-            semantic_candidates.append({"id": pid, "type": "proposition", "text": ""})
-        procedural_candidates = []
-        for rid in retrieved.prescription_ids:
-            procedural_candidates.append({"id": rid, "type": "prescription", "text": ""})
-        evidence_candidates = []
-        for sid in retrieved.evidence_step_ids:
-            evidence_candidates.append({"id": sid, "type": "episode_step", "text": ""})
+        semantic_candidates = [{"id": pid, "type": "proposition", "text": ""} for pid in retrieved.proposition_ids]
+        procedural_candidates = [{"id": rid, "type": "prescription", "text": ""} for rid in retrieved.prescription_ids]
+        evidence_candidates = [{"id": sid, "type": "episode_step", "text": ""} for sid in retrieved.evidence_step_ids]
 
         # If store exists, enrich candidates with actual text.
         if self.sqlite_store:
@@ -171,7 +165,6 @@ class PlugMem:
             for it in procedural_candidates:
                 row = pres.get(it["id"])
                 if row:
-                    # Prefer DSL or intent
                     meta = row.get("metadata") or {}
                     dsl = meta.get("workflow_dsl") if isinstance(meta, dict) else None
                     it["text"] = f"Intent: {row['intent_text']}" + (f" | DSL: {dsl}" if dsl else "")
@@ -190,7 +183,7 @@ class PlugMem:
 
         # Prefer type-aware fusion; fall back to memory-block answerer if needed.
         try:
-            return answer_with_citations_from_items(
+            ans = answer_with_citations_from_items(
                 llm=llm,
                 query=query,
                 semantic=extracted["semantic"],
@@ -198,4 +191,27 @@ class PlugMem:
                 evidence=extracted["evidence"],
             )
         except Exception:
-            return answer_with_citations(llm=llm, query=query, memory_block=ctx.final_prompt_block)
+            ans = answer_with_citations(llm=llm, query=query, memory_block=ctx.final_prompt_block)
+
+        # Third cut: enforce citations resolve to existing ids.
+        allowed_prop = set(retrieved.proposition_ids)
+        allowed_pres = set(retrieved.prescription_ids)
+        allowed_step = set(retrieved.evidence_step_ids)
+
+        filtered = []
+        for ci in ans.cited_items:
+            if ci.type == "proposition" and ci.id in allowed_prop:
+                filtered.append(ci)
+            elif ci.type == "prescription" and ci.id in allowed_pres:
+                filtered.append(ci)
+            elif ci.type == "episode_step" and ci.id in allowed_step:
+                filtered.append(ci)
+
+        ans.cited_items = filtered
+        ans.metadata["citations_filtered"] = True
+        ans.metadata["candidate_counts"] = {
+            "propositions": len(allowed_prop),
+            "prescriptions": len(allowed_pres),
+            "episode_steps": len(allowed_step),
+        }
+        return ans
