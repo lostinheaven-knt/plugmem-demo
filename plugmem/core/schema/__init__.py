@@ -1,7 +1,8 @@
+from .answer import CitedItem, StructuredAnswer
 from .episode import Episode, EpisodeStep
-from .semantic import Concept, Proposition
-from .procedural import Intent, Prescription
 from .memory_context import MemoryContext, RetrievedMemory
+from .procedural import Intent, Prescription
+from .semantic import Concept, Proposition
 
 __all__ = [
     "Episode",
@@ -12,4 +13,6 @@ __all__ = [
     "Prescription",
     "MemoryContext",
     "RetrievedMemory",
+    "CitedItem",
+    "StructuredAnswer",
 ]

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from plugmem.core.schema import MemoryContext, RetrievedMemory
 from plugmem.core.storage.sqlite_store import SQLiteStore
 
@@ -21,15 +23,9 @@ class MemoryReasoner:
             )
             return MemoryContext(final_prompt_block=final_prompt_block)
 
-        proposition_rows = {
-            row["proposition_id"]: row for row in self.store.fetch_propositions()
-        }
-        prescription_rows = {
-            row["prescription_id"]: row for row in self.store.fetch_prescriptions()
-        }
-        evidence_rows = {
-            row["step_id"]: row for row in self.store.fetch_episode_steps(retrieved.evidence_step_ids)
-        }
+        proposition_rows = {row["proposition_id"]: row for row in self.store.fetch_propositions()}
+        prescription_rows = {row["prescription_id"]: row for row in self.store.fetch_prescriptions()}
+        evidence_rows = {row["step_id"]: row for row in self.store.fetch_episode_steps(retrieved.evidence_step_ids)}
 
         semantic_lines = []
         for proposition_id in retrieved.proposition_ids:
@@ -38,7 +34,7 @@ class MemoryReasoner:
                 continue
             score = retrieved.scores.get(proposition_id)
             suffix = f" (score={score:.2f})" if score is not None else ""
-            semantic_lines.append(f"- {row['content']}{suffix}")
+            semantic_lines.append(f"- [proposition:{proposition_id}] {row['content']}{suffix}")
 
         procedural_lines = []
         for prescription_id in retrieved.prescription_ids:
@@ -48,18 +44,23 @@ class MemoryReasoner:
             score = retrieved.scores.get(prescription_id)
             suffix = f" (score={score:.2f})" if score is not None else ""
             workflow = row.get("workflow") or []
-            if workflow:
-                procedural_lines.append(f"- Intent: {row['intent_text']}{suffix}")
+
+            # Prefer DSL from metadata if present
+            meta = row.get("metadata") or {}
+            dsl = meta.get("workflow_dsl") if isinstance(meta, dict) else None
+
+            procedural_lines.append(f"- [prescription:{prescription_id}] Intent: {row['intent_text']}{suffix}")
+            if isinstance(dsl, dict):
+                procedural_lines.append(f"  - DSL: {json.dumps(dsl, ensure_ascii=False)}")
+            elif workflow:
                 for step in workflow[:5]:
                     procedural_lines.append(f"  - {step}")
-            else:
-                procedural_lines.append(f"- Intent: {row['intent_text']}{suffix}")
 
         evidence_lines = []
         sorted_evidence = sorted(evidence_rows.values(), key=lambda item: (item["episode_id"], item["t"]))
         for row in sorted_evidence:
             evidence_lines.append(
-                f"- Step {row['t']}: obs={row['observation']} | action={row['action']} | subgoal={row['subgoal']}"
+                f"- [episode_step:{row['step_id']}] Step {row['t']}: obs={row['observation']} | action={row['action']} | subgoal={row['subgoal']}"
             )
 
         semantic_summary = "\n".join(semantic_lines)

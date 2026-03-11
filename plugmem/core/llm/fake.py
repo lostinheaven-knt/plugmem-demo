@@ -24,6 +24,19 @@ class FakeLLM:
                 ]
             }
 
+        # Phase 3: per-type extraction
+        if "selecting and condensing useful information" in prompt and "semantic" in str(schema):
+            # Return empty selections; fusion will still produce an answer.
+            return {"semantic": [], "procedural": [], "evidence": []}
+
+        # Phase 3: final answer with citations
+        if "Return JSON ONLY with keys: answer" in prompt and "cited_items" in str(schema):
+            return {
+                "answer": "Based on memory, search for 'wireless mouse', sort by price, then inspect the top results.",
+                "reasoning_brief": "Used retrieved facts and the stored workflow.",
+                "cited_items": [],
+            }
+
         # Phase 2: workflow DSL
         if "strict JSON workflow DSL" in prompt and "steps" in str(schema):
             return {
