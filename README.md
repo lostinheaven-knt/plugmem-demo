@@ -21,6 +21,16 @@ pytest -q
 python -m plugmem.scripts.demo_ingest
 ```
 
+Or using `make`:
+
+```bash
+make venv
+source .venv/bin/activate
+make install
+make test
+make demo
+```
+
 ## Notes
 
 - Secrets are read from `.secrets.env` (never commit it).
