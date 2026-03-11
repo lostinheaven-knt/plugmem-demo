@@ -5,6 +5,7 @@ import json
 from plugmem.core.llm.base import LLMClient
 from plugmem.core.schema import EpisodeStep, Prescription
 from plugmem.core.structuring.deduplicator import LLMDeduplicator
+from plugmem.core.structuring.mermaid import workflow_dsl_to_mermaid_flowchart
 from plugmem.core.structuring.workflow_dsl import parse_workflow_dsl, workflow_dsl_to_json
 
 
@@ -71,10 +72,12 @@ class ProceduralExtractor:
         # Validate/normalize with our parser (best-effort) to enforce ops/fields.
         dsl = parse_workflow_dsl(json.dumps(data, ensure_ascii=False) if isinstance(data, dict) else str(data))
         workflow_json = workflow_dsl_to_json(dsl)
+        workflow_mermaid = workflow_dsl_to_mermaid_flowchart(dsl)
 
         return Prescription(
             intent=dsl.intent,
+            # Backward compatibility: keep workflow as list[str]. Put serialized DSL in it.
             workflow=[json.dumps(workflow_json, ensure_ascii=False)],
             source_step_ids=[step.step_id for step in segment_steps],
-            metadata={"workflow_dsl": workflow_json},
+            metadata={"workflow_dsl": workflow_json, "workflow_mermaid": workflow_mermaid},
         )
