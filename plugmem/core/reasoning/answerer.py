@@ -64,6 +64,8 @@ def answer_with_citations_from_items(
     """Phase 3 (type-aware): answer using per-type extracted items.
 
     Each input list should contain objects with keys: id, type, text.
+
+    Agent-friendly enhancement: output may include suggested_actions.
     """
     if not llm:
         return StructuredAnswer(answer="", reasoning_brief="", cited_items=[], metadata={"error": "no_llm"})
@@ -76,9 +78,11 @@ def answer_with_citations_from_items(
 
     prompt = (
         "You are answering a user query using memory items of different types.\n"
-        "Return JSON ONLY with keys: answer, reasoning_brief, cited_items.\n\n"
+        "Return JSON ONLY with keys: answer, reasoning_brief, cited_items, suggested_actions.\n\n"
         "Rules:\n"
         "- cited_items must cite ONLY ids that appear in the provided lists.\n"
+        "- suggested_actions is an optional list of next steps for an agent, each: {op,target,value,note}.\n"
+        "- op must be one of: navigate, click, type, wait, verify, ask_user.\n"
         "- Prefer citing semantic facts for claims, procedures for how-to, and evidence for grounding.\n\n"
         f"Query: {query}\n\n"
         f"Semantic facts:\n{fmt(semantic) or '- None'}\n\n"
@@ -101,6 +105,19 @@ def answer_with_citations_from_items(
                         "quote": {"type": "string"},
                     },
                     "required": ["type", "id", "quote"],
+                },
+            },
+            "suggested_actions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "op": {"type": "string"},
+                        "target": {"type": "string"},
+                        "value": {"type": "string"},
+                        "note": {"type": "string"},
+                    },
+                    "required": ["op", "target", "value", "note"],
                 },
             },
         },
@@ -137,9 +154,17 @@ def _parse_structured_answer(text: str) -> StructuredAnswer:
         )
         cited.append(ci)
 
+    # suggested_actions is optional
+    suggested_actions = obj.get("suggested_actions", [])
+    if suggested_actions is None:
+        suggested_actions = []
+    if not isinstance(suggested_actions, list):
+        raise StructuredOutputError("suggested_actions must be a list")
+
     return StructuredAnswer(
         answer=obj["answer"].strip(),
         reasoning_brief=obj["reasoning_brief"].strip(),
         cited_items=cited,  # pydantic will coerce
+        suggested_actions=suggested_actions,  # pydantic will coerce
         metadata={},
     )
