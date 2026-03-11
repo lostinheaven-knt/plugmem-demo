@@ -34,6 +34,26 @@ class FakeLLM:
                 ],
             }
 
+        # Phase 1: merge/evolve semantic facts
+        if "deduplicating and evolving semantic facts" in prompt and "merged_statement" in str(schema):
+            # Default: treat as unrelated unless there is obvious overlap
+            lower = prompt.lower()
+            if "wireless mouse" in lower:
+                relationship = "UPDATE_SAME_FACT"
+                merged_statement = "The target item is a wireless mouse."
+            else:
+                relationship = "UNRELATED"
+                merged_statement = ""
+
+            return {
+                "relationship": relationship,
+                "merged_statement": merged_statement or self._infer_proposition(prompt),
+                "deactivate_earlier": relationship != "UNRELATED",
+                "deactivate_later": relationship != "UNRELATED",
+                "confidence": 0.9,
+                "reason": "Deterministic fake merge decision.",
+            }
+
         if "Determine whether the following two" in prompt:
             return {
                 "decision": self._infer_duplicate_decision(prompt),
