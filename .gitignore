@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Secrets
+.secrets.env
+
+# OpenClaw state
+.openclaw/
+
+# Data / artifacts
+*.db
+*.sqlite
+*.sqlite3
+*.pdf
