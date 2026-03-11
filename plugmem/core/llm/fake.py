@@ -24,6 +24,20 @@ class FakeLLM:
                 ]
             }
 
+        # Phase 2: workflow DSL
+        if "strict JSON workflow DSL" in prompt and "steps" in str(schema):
+            return {
+                "intent": self._infer_intent(prompt),
+                "steps": [
+                    {"op": "navigate", "target": "search page"},
+                    {"op": "type", "target": "search box", "value": "wireless mouse"},
+                    {"op": "click", "target": "search button"},
+                    {"op": "verify", "target": "results list", "note": "results are shown"},
+                ],
+                "preconditions": ["User is on the relevant site"],
+                "postconditions": ["Search results are visible"],
+            }
+
         if "Extract an environment-agnostic intent and workflow" in prompt:
             return {
                 "intent": self._infer_intent(prompt),
@@ -36,7 +50,6 @@ class FakeLLM:
 
         # Phase 1: merge/evolve semantic facts
         if "deduplicating and evolving semantic facts" in prompt and "merged_statement" in str(schema):
-            # Default: treat as unrelated unless there is obvious overlap
             lower = prompt.lower()
             if "wireless mouse" in lower:
                 relationship = "UPDATE_SAME_FACT"
