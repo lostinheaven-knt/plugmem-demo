@@ -8,8 +8,9 @@ import yaml
 
 from plugmem.core.graph.graph_store import MemoryGraphStore
 from plugmem.core.llm.deepseek import DeepSeekLLM
-from plugmem.core.reasoning.answerer import answer_with_citations
+from plugmem.core.reasoning.answerer import answer_with_citations, answer_with_citations_from_items
 from plugmem.core.reasoning.memory_reasoner import MemoryReasoner
+from plugmem.core.reasoning.type_extractors import extract_key_items
 from plugmem.core.retrieval.retriever import MemoryRetriever, RetrievalInput
 from plugmem.core.schema import StructuredAnswer
 from plugmem.core.storage.sqlite_store import SQLiteStore
@@ -145,6 +146,56 @@ class PlugMem:
         """Phase 3: return a structured answer with citations."""
         retrieved = self.retriever.retrieve(RetrievalInput(query=query, instruction=instruction, state=state))
         ctx = self.reasoner.build_context(query=query, retrieved=retrieved)
-        # Use the same llm as standardizer (best-effort)
         llm = getattr(self.standardizer, "llm", None)
-        return answer_with_citations(llm=llm, query=query, memory_block=ctx.final_prompt_block)
+
+        # Build candidate lists with ids.
+        semantic_candidates = []
+        for pid in retrieved.proposition_ids:
+            semantic_candidates.append({"id": pid, "type": "proposition", "text": ""})
+        procedural_candidates = []
+        for rid in retrieved.prescription_ids:
+            procedural_candidates.append({"id": rid, "type": "prescription", "text": ""})
+        evidence_candidates = []
+        for sid in retrieved.evidence_step_ids:
+            evidence_candidates.append({"id": sid, "type": "episode_step", "text": ""})
+
+        # If store exists, enrich candidates with actual text.
+        if self.sqlite_store:
+            props = {r["proposition_id"]: r for r in self.sqlite_store.fetch_propositions()}
+            pres = {r["prescription_id"]: r for r in self.sqlite_store.fetch_prescriptions()}
+            steps = {r["step_id"]: r for r in self.sqlite_store.fetch_episode_steps(retrieved.evidence_step_ids)}
+            for it in semantic_candidates:
+                row = props.get(it["id"])
+                if row:
+                    it["text"] = row["content"]
+            for it in procedural_candidates:
+                row = pres.get(it["id"])
+                if row:
+                    # Prefer DSL or intent
+                    meta = row.get("metadata") or {}
+                    dsl = meta.get("workflow_dsl") if isinstance(meta, dict) else None
+                    it["text"] = f"Intent: {row['intent_text']}" + (f" | DSL: {dsl}" if dsl else "")
+            for it in evidence_candidates:
+                row = steps.get(it["id"])
+                if row:
+                    it["text"] = f"Step {row['t']}: obs={row['observation']} action={row['action']} subgoal={row['subgoal']}"
+
+        extracted = extract_key_items(
+            llm=llm,
+            query=query,
+            semantic_items=semantic_candidates,
+            procedural_items=procedural_candidates,
+            evidence_items=evidence_candidates,
+        )
+
+        # Prefer type-aware fusion; fall back to memory-block answerer if needed.
+        try:
+            return answer_with_citations_from_items(
+                llm=llm,
+                query=query,
+                semantic=extracted["semantic"],
+                procedural=extracted["procedural"],
+                evidence=extracted["evidence"],
+            )
+        except Exception:
+            return answer_with_citations(llm=llm, query=query, memory_block=ctx.final_prompt_block)

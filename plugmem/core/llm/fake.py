@@ -24,14 +24,17 @@ class FakeLLM:
                 ]
             }
 
-        # Phase 3: answer with citations
-        if "cited_items" in str(schema) and "answer" in str(schema) and "Memory:" in prompt:
+        # Phase 3: per-type extraction
+        if "selecting and condensing useful information" in prompt and "semantic" in str(schema):
+            # Return empty selections; fusion will still produce an answer.
+            return {"semantic": [], "procedural": [], "evidence": []}
+
+        # Phase 3: final answer with citations
+        if "Return JSON ONLY with keys: answer" in prompt and "cited_items" in str(schema):
             return {
-                "answer": "Based on memory, the agent should focus on wireless mouse results and compare by price.",
-                "reasoning_brief": "Used retrieved facts and procedures.",
-                "cited_items": [
-                    {"type": "proposition", "id": "prop_fake", "quote": "The target item is a wireless mouse."}
-                ],
+                "answer": "Based on memory, search for 'wireless mouse', sort by price, then inspect the top results.",
+                "reasoning_brief": "Used retrieved facts and the stored workflow.",
+                "cited_items": [],
             }
 
         # Phase 2: workflow DSL
