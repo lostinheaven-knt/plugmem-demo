@@ -45,10 +45,18 @@ class PipelineP1Tests(unittest.TestCase):
 
             candidates = sorted((runtime_dir / "candidates").glob("*/candidate.json"))
             self.assertEqual(len(candidates), 3)
+            seen_trigger_types = set()
             for candidate_path in candidates:
                 candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
                 self.assertIn(candidate["candidate_type"], {"patch", "replacement", "composition"})
                 self.assertIn(candidate["promotion_status"], {"draft", "experimental", "stable", "deprecated", "archived"})
+                self.assertEqual(candidate["skill_name"], "table-analysis-pro")
+                self.assertEqual(candidate["parent_skill_id"], "table-analysis-pro")
+                self.assertIn(candidate["trigger_type"], {"skill_failure", "user_correction", "repeated_success_pattern"})
+                self.assertTrue(candidate["derived_from_report_id"].startswith("report-"))
+                seen_trigger_types.add(candidate["trigger_type"])
+
+            self.assertEqual(seen_trigger_types, {"skill_failure", "user_correction", "repeated_success_pattern"})
 
     def test_schema_validation_rejects_bad_candidate_type_written_directly(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

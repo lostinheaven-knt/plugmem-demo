@@ -186,6 +186,10 @@ def main() -> int:
         candidate_json = candidate_dir / "candidate.json"
         if candidate_json.exists():
             candidate = load_json_file(candidate_json, require_dict=True, description="candidate.json")
+            candidate["skill_name"] = str(report.get("skill_name") or candidate.get("skill_name") or parent_skill_dir.name)
+            candidate["parent_skill_id"] = str(candidate.get("parent_skill_id") or parent_skill_dir.name)
+            candidate["trigger_type"] = str(report.get("trigger_type") or candidate.get("trigger_type") or "")
+            candidate["derived_from_report_id"] = str(report.get("report_id") or candidate.get("derived_from_report_id") or "")
             candidate["proposed_changes_summary"] = (
                 "Copied parent skill, appended Candidate Patch Notes, and inserted section-targeted evolution patch blocks"
             )

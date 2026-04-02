@@ -57,7 +57,9 @@ def main() -> int:
         candidate = {
             "candidate_id": candidate_id,
             "candidate_type": candidate_type,
+            "skill_name": skill_name,
             "parent_skill_id": skill_name,
+            "trigger_type": "",
             "promotion_status": "draft",
             "validation_status": "pending",
             "proposed_changes_summary": "",

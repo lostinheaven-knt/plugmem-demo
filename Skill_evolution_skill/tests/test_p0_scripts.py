@@ -77,6 +77,16 @@ class ScriptSmokeTests(unittest.TestCase):
             self.assertFalse(payload["passed"])
             self.assertIn("skill_name_stub_or_missing", payload["failed_checks"])
 
+    def test_create_candidate_stub_records_skill_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.run_script("create_candidate_stub.py", tmp, "demo-skill", "patch")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            candidate_dir = Path(result.stdout.strip())
+            candidate = json.loads((candidate_dir / "candidate.json").read_text(encoding="utf-8"))
+            self.assertEqual(candidate["skill_name"], "demo-skill")
+            self.assertEqual(candidate["parent_skill_id"], "demo-skill")
+            self.assertEqual(candidate["trigger_type"], "")
+
 
 if __name__ == "__main__":
     unittest.main()
