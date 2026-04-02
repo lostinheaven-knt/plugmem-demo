@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ValidationResult",
+  "type": "object",
+  "required": ["validation_id", "candidate_id", "passed"],
+  "properties": {
+    "validation_id": { "type": "string" },
+    "candidate_id": { "type": "string" },
+    "checks_run": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "passed": { "type": "boolean" },
+    "failed_checks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "smoke_test_summary": { "type": "string" },
+    "compared_against_parent": { "type": "boolean" }
+  }
+}

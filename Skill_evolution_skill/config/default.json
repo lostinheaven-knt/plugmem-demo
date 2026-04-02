@@ -1,0 +1,35 @@
+{
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s %(levelname)s %(name)s: %(message)s"
+  },
+  "runtime": {
+    "required_dirs": [
+      "inbox",
+      "transactions",
+      "reports",
+      "candidates",
+      "lineage"
+    ]
+  },
+  "candidate": {
+    "allowed_types": [
+      "patch",
+      "replacement",
+      "composition"
+    ],
+    "allowed_promotion_status": [
+      "draft",
+      "experimental",
+      "stable",
+      "deprecated",
+      "archived"
+    ],
+    "allowed_validation_status": [
+      "pending",
+      "passed",
+      "failed",
+      "warning"
+    ]
+  }
+}

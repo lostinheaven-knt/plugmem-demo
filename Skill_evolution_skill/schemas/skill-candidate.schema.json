@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SkillCandidate",
+  "type": "object",
+  "required": ["candidate_id", "candidate_type", "promotion_status"],
+  "properties": {
+    "candidate_id": { "type": "string" },
+    "candidate_type": {
+      "type": "string",
+      "enum": ["patch", "replacement", "composition"]
+    },
+    "skill_name": { "type": "string" },
+    "trigger_type": { "type": "string" },
+    "parent_skill_id": { "type": "string" },
+    "parent_skill_version": { "type": "string" },
+    "parent_skill_path": { "type": "string" },
+    "derived_from_report_id": { "type": "string" },
+    "rationale": { "type": "string" },
+    "proposed_changes_summary": { "type": "string" },
+    "candidate_location": { "type": "string" },
+    "validation_status": { "type": "string" },
+    "promotion_recommendation": { "type": "string" },
+    "promotion_reason": { "type": "string" },
+    "materialized_from_parent": { "type": "boolean" },
+    "materialized_file_count": { "type": "integer", "minimum": 0 },
+    "patch_tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "target_sections": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "fallback_sections": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "promotion_status": {
+      "type": "string",
+      "enum": ["draft", "experimental", "stable", "deprecated", "archived"]
+    }
+  }
+}

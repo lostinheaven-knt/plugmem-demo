@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EvolutionTransaction",
+  "type": "object",
+  "required": ["transaction_id", "trigger_type", "status"],
+  "properties": {
+    "transaction_id": { "type": "string" },
+    "created_at": { "type": "string" },
+    "trigger_type": { "type": "string" },
+    "host_framework": { "type": "string" },
+    "source_skill_id": { "type": "string" },
+    "source_skill_version": { "type": "string" },
+    "related_trace_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "detected",
+        "normalized",
+        "attributed",
+        "candidate_generated",
+        "validated",
+        "review_required",
+        "finalized",
+        "rejected"
+      ]
+    },
+    "decision_summary": { "type": "string" },
+    "recommended_action": { "type": "string" }
+  }
+}

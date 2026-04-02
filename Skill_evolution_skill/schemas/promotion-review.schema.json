@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PromotionReview",
+  "type": "object",
+  "required": ["candidate_id", "recommendation"],
+  "properties": {
+    "candidate_id": { "type": "string" },
+    "structural_validity": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    },
+    "trigger_alignment": {
+      "type": "string",
+      "enum": ["strong", "weak", "fail", "unknown"]
+    },
+    "behavioral_improvement": {
+      "type": "string",
+      "enum": ["pass", "partial", "fail", "unknown"]
+    },
+    "risk_delta": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "unknown"]
+    },
+    "recommendation": {
+      "type": "string",
+      "enum": ["reject", "draft", "review_required", "experimental_candidate", "promotable"]
+    },
+    "review_notes": { "type": "string" },
+    "rollback_ready": { "type": "boolean" }
+  }
+}

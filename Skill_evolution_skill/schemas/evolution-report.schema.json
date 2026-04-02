@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EvolutionReport",
+  "type": "object",
+  "required": ["report_id", "transaction_id", "trigger_type"],
+  "properties": {
+    "report_id": { "type": "string" },
+    "transaction_id": { "type": "string" },
+    "trigger_type": { "type": "string" },
+    "skill_name": { "type": "string" },
+    "task_summary": { "type": "string" },
+    "input_summary": { "type": "string" },
+    "observed_failure": { "type": "string" },
+    "user_feedback": { "type": "string" },
+    "environment_notes": { "type": "string" },
+    "evidence": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
