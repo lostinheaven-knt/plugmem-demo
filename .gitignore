@@ -15,7 +15,3 @@ __pycache__/
 *.sqlite
 *.sqlite3
 *.pdf
-*.skill
-
-# Skill evolution runtime/build artifacts
-.skill-evolution/
