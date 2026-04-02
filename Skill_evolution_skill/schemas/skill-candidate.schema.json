@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SkillCandidate",
+  "type": "object",
+  "required": ["candidate_id", "candidate_type", "promotion_status"],
+  "properties": {
+    "candidate_id": { "type": "string" },
+    "candidate_type": {
+      "type": "string",
+      "enum": ["patch", "replacement", "composition"]
+    },
+    "parent_skill_id": { "type": "string" },
+    "parent_skill_version": { "type": "string" },
+    "derived_from_report_id": { "type": "string" },
+    "rationale": { "type": "string" },
+    "proposed_changes_summary": { "type": "string" },
+    "candidate_location": { "type": "string" },
+    "validation_status": { "type": "string" },
+    "promotion_status": {
+      "type": "string",
+      "enum": ["draft", "experimental", "stable", "deprecated", "archived"]
+    }
+  }
+}
